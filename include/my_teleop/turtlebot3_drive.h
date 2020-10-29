@@ -25,6 +25,15 @@
 #include <geometry_msgs/Twist.h> // ロボットを動かすために必要
 #include <nav_msgs/Odometry.h>
 
+#include<stdio.h>
+#include <termios.h>
+#include <unistd.h>
+#include <chrono>
+#include <future>
+#include <iostream>
+
+
+
 #define DEG2RAD (M_PI / 180.0)
 #define RAD2DEG (180.0 / M_PI)
 
@@ -46,7 +55,7 @@ class Turtlebot3Drive
   Turtlebot3Drive();
   ~Turtlebot3Drive();
   bool init();
-  bool controlLoop(char key, double& xlinear, double& zangular);
+  bool controlLoop(double& xlinear, double& zangular);
 
  private:
   // ROS NodeHandle

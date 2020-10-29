@@ -1,4 +1,7 @@
 #include "my_teleop/turtlebot3_drive.h"
+#include<stdio.h>
+#include <termios.h>
+#include <unistd.h>
 
 using namespace std;
 
@@ -79,7 +82,7 @@ void Turtlebot3Drive::updatecommandVelocity(double linear, double angular)
 
 
 
-/*bool getch(int& c)
+int getch()
 {
   static struct termios oldt, newt;
   tcgetattr( STDIN_FILENO, &oldt);           // save old settings
@@ -87,55 +90,35 @@ void Turtlebot3Drive::updatecommandVelocity(double linear, double angular)
   newt.c_lflag &= ~(ICANON);                 // disable buffering      
   tcsetattr( STDIN_FILENO, TCSANOW, &newt);  // apply new settings
 
-  c = getchar();  // read character (non-blocking)
+  int c = getchar();  // read character (non-blocking)
 
   tcsetattr( STDIN_FILENO, TCSANOW, &oldt);  // restore old settings
-  return true;
-}*/
-
-/*bool myAsyncGetline(char & c)
-{
-    std::cout<<"Enter something within the time limit"<<endl;
-    getlline(cin,c);
-    return true;
-}*/
+  return c;
+}
 
 bool Turtlebot3Drive::controlLoop(double& xlinear, double& zangular)
 {
-	//char key;
-	//std::future<void> f = std::async (myAsyncGetline,key); 
-
-	int key;
-	std::future<void> f = std::async(
-		[](int& _i){
-			std::cin >> _i;
-		},
-		std::ref(key)
-	);
-
 	if (scan_data_[CENTER] > check_forward_dist_){
-		if (f.wait_for(std::chrono::milliseconds(1000)) == std::future_status::timeout){}
-		else{
-			switch (key){
-				case 'w': 
-				    xlinear  +=  0.1;
-				    break;
-				case 'x':
-				    xlinear  += -0.1;
-				    break;
-				case 'a':
-				    zangular +=  0.1;
-				    break;
-				case 'd':
-				    zangular += -0.1;
-				    break;
-				default:
-				    xlinear  = 0.0; 
-				    zangular = 0.0; 
-				    break;
-			}
-			updatecommandVelocity(xlinear, zangular);
+		int key = getch();  // 入力キーの値
+		switch (key){
+			case 'w': 
+			    xlinear  +=  0.1;
+			    break;
+			case 'x':
+			    xlinear  += -0.1;
+			    break;
+			case 'a':
+			    zangular +=  0.1;
+			    break;
+			case 'd':
+			    zangular += -0.1;
+			    break;
+			default:
+			    xlinear  = 0.0; 
+			    zangular = 0.0; 
+			    break;
 		}
+		updatecommandVelocity(xlinear, zangular);
         }
 	
 	if(scan_data_[CENTER] < check_forward_dist_){
@@ -144,28 +127,26 @@ bool Turtlebot3Drive::controlLoop(double& xlinear, double& zangular)
 		}
 		//cout << "auto stop" << endl;
 		//prev_tb3_pose_ = tb3_pose_;
-		if (f.wait_for(std::chrono::milliseconds(1000)) == std::future_status::timeout){}
-		else{
-			switch (key){
-				case 'w': 
-				    cout << "forward attention !!" << endl;
-				    break;
-				case 'x':
-				    xlinear  += -0.1;
-				    break;
-				case 'a':
-				    zangular +=  0.1;
-				    break;
-				case 'd':
-				    zangular += -0.1;
-				    break;
-				default:
-				    xlinear  = 0.0; 
-				    zangular = 0.0; 
-				    break;
-			}
-			updatecommandVelocity(xlinear, zangular);
+		int key = getch();  // 入力キーの値
+		switch (key){
+			case 'w': 
+			    cout << "forward attention !!" << endl;
+			    break;
+			case 'x':
+			    xlinear  += -0.1;
+			    break;
+			case 'a':
+			    zangular +=  0.1;
+			    break;
+			case 'd':
+			    zangular += -0.1;
+			    break;
+			default:
+			    xlinear  = 0.0; 
+			    zangular = 0.0; 
+			    break;
 		}
+		updatecommandVelocity(xlinear, zangular);
 	}
   return true;
 }
@@ -188,7 +169,7 @@ int main(int argc, char **argv)
 
     Turtlebot3Drive turtlebot3_drive;
     
-    ros::Rate rate(10);
+    ros::Rate rate(125);
     // ループの頻度を設定するためのオブジェクトを作成。この場合は10Hz、1秒間に10回数、1ループ100ms。
 
 //    geometry_msgs::Twist vel;
