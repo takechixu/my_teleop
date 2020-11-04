@@ -12,7 +12,7 @@ Turtlebot3Drive::Turtlebot3Drive()
 
 Turtlebot3Drive::~Turtlebot3Drive()
 {
-  updatecommandVelocity(0.0, 0.0);
+//  updatecommandVelocity(0.0, 0.0);
   ros::shutdown();
 }
 
@@ -38,6 +38,7 @@ bool Turtlebot3Drive::init()
   // initialize subscribers
   laser_scan_sub_  = nh_.subscribe("scan", 10, &Turtlebot3Drive::laserScanMsgCallBack, this);
   odom_sub_ = nh_.subscribe("odom", 10, &Turtlebot3Drive::odomMsgCallBack, this);
+  joy_sub_ = nh_.subscribe("joy", 10, &Turtlebot3Drive::updatecommandVelocity, this);
 
   return true;
 }
@@ -67,107 +68,26 @@ void Turtlebot3Drive::laserScanMsgCallBack(const sensor_msgs::LaserScan::ConstPt
   }
 }
 
-void Turtlebot3Drive::updatecommandVelocity(double linear, double angular)
+
+void Turtlebot3Drive::updatecommandVelocity(const sensor_msgs::Joy& joy_msg)
 {
   geometry_msgs::Twist cmd_vel;
 
-  cmd_vel.linear.x  = linear;
-  cmd_vel.angular.z = angular;
+  if(scan_data_[CENTER] < check_forward_dist_){
+	if(cmd_vel.linear.x > 0.0){
+		cmd_vel.linear.x = 0;
+		}
+	cmd_vel.linear.x = joy_msg.axes[2]*(0.25)-0.25;
+	cmd_vel.angular.z = joy_msg.axes[0];
+	
+  }
+  else if(scan_data_[CENTER] > check_forward_dist_){
+	cmd_vel.linear.x = (joy_msg.axes[5]*(-0.25)+0.25)+(joy_msg.axes[2]*(0.25)-0.25);
+	cmd_vel.angular.z = joy_msg.axes[0];
+  }
+
 
   cmd_vel_pub_.publish(cmd_vel);
-}
-
-
-
-/*bool getch(int& c)
-{
-  static struct termios oldt, newt;
-  tcgetattr( STDIN_FILENO, &oldt);           // save old settings
-  newt = oldt;
-  newt.c_lflag &= ~(ICANON);                 // disable buffering      
-  tcsetattr( STDIN_FILENO, TCSANOW, &newt);  // apply new settings
-
-  c = getchar();  // read character (non-blocking)
-
-  tcsetattr( STDIN_FILENO, TCSANOW, &oldt);  // restore old settings
-  return true;
-}*/
-
-/*bool myAsyncGetline(char & c)
-{
-    std::cout<<"Enter something within the time limit"<<endl;
-    getlline(cin,c);
-    return true;
-}*/
-
-bool Turtlebot3Drive::controlLoop(double& xlinear, double& zangular)
-{
-	//char key;
-	//std::future<void> f = std::async (myAsyncGetline,key); 
-
-	int key;
-	std::future<void> f = std::async(
-		[](int& _i){
-			std::cin >> _i;
-		},
-		std::ref(key)
-	);
-
-	if (scan_data_[CENTER] > check_forward_dist_){
-		if (f.wait_for(std::chrono::milliseconds(1000)) == std::future_status::timeout){}
-		else{
-			switch (key){
-				case 'w': 
-				    xlinear  +=  0.1;
-				    break;
-				case 'x':
-				    xlinear  += -0.1;
-				    break;
-				case 'a':
-				    zangular +=  0.1;
-				    break;
-				case 'd':
-				    zangular += -0.1;
-				    break;
-				default:
-				    xlinear  = 0.0; 
-				    zangular = 0.0; 
-				    break;
-			}
-			updatecommandVelocity(xlinear, zangular);
-		}
-        }
-	
-	if(scan_data_[CENTER] < check_forward_dist_){
-		if(xlinear > 0.0){
-			updatecommandVelocity(0.0, zangular);
-		}
-		//cout << "auto stop" << endl;
-		//prev_tb3_pose_ = tb3_pose_;
-		if (f.wait_for(std::chrono::milliseconds(1000)) == std::future_status::timeout){}
-		else{
-			switch (key){
-				case 'w': 
-				    cout << "forward attention !!" << endl;
-				    break;
-				case 'x':
-				    xlinear  += -0.1;
-				    break;
-				case 'a':
-				    zangular +=  0.1;
-				    break;
-				case 'd':
-				    zangular += -0.1;
-				    break;
-				default:
-				    xlinear  = 0.0; 
-				    zangular = 0.0; 
-				    break;
-			}
-			updatecommandVelocity(xlinear, zangular);
-		}
-	}
-  return true;
 }
 
 
@@ -186,28 +106,22 @@ int main(int argc, char **argv)
 
 //    ros::Publisher  pub; // パブリッシャの作成。トピックに対してデータを送信。
 
+//    ros::Subscriber joy_sub = nh.subscribe("joy", 10, Turtlebot3Drive::updatecommandVelocity);
     Turtlebot3Drive turtlebot3_drive;
     
     ros::Rate rate(10);
     // ループの頻度を設定するためのオブジェクトを作成。この場合は10Hz、1秒間に10回数、1ループ100ms。
 
 //    geometry_msgs::Twist vel;
-    // geometry_msgs::Twist　この型は並進速度と回転速度(vector3:3次元ベクトル) を合わせたもので、速度指令によく使われる
 
 //    pub= nh.advertise<geometry_msgs::Twist>("/cmd_vel", 10);
     // マスターにgeometry_msgs::Twist型のデータを送ることを伝える
     // マスターは/cmd_velトピック(1番目の引数）を購読する
     // 全てのノードにトピックができたことを知らせる(advertise)。
     // 2番目の引数はデータのバッファサイズ
-
-    cout << "w: forward, x: backward, d: right, a:left, s:stop" << endl;
-
-    double xlinear=0;
-    double zangular=0;
     
     while (ros::ok()) { // このノードが使える間は無限ループする
 
-	turtlebot3_drive.controlLoop(xlinear, zangular);
         ros::spinOnce();     // １回だけコールバック関数を呼び出す
         rate.sleep();        // 指定した周期でループするよう寝て待つ
 

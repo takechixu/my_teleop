@@ -4,5 +4,6 @@
 
   <param name="cmd_vel_topic_name" value="$(arg cmd_vel)"/>
 
+  <node name="joy_node" pkg="joy" type="joy_node" />
   <node name="$(arg name)_node" pkg="my_teleop" type="my_teleop_node" required="true" output="screen"/>
 </launch>

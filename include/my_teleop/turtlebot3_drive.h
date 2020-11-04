@@ -24,6 +24,7 @@
 #include <sensor_msgs/LaserScan.h>
 #include <geometry_msgs/Twist.h> // ロボットを動かすために必要
 #include <nav_msgs/Odometry.h>
+#include <sensor_msgs/Joy.h>
 
 #include<stdio.h>
 #include <termios.h>
@@ -72,6 +73,7 @@ class Turtlebot3Drive
   // ROS Topic Subscribers
   ros::Subscriber laser_scan_sub_;
   ros::Subscriber odom_sub_;
+  ros::Subscriber joy_sub_;
 
   // Variables
   double escape_range_;
@@ -84,7 +86,7 @@ class Turtlebot3Drive
   double prev_tb3_pose_;
 
   // Function prototypes
-  void updatecommandVelocity(double linear, double angular);
+  void updatecommandVelocity(const sensor_msgs::Joy& joy_msg);
   void laserScanMsgCallBack(const sensor_msgs::LaserScan::ConstPtr &msg);
   void odomMsgCallBack(const nav_msgs::Odometry::ConstPtr &msg);
 };
