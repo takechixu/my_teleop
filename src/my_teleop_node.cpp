@@ -26,8 +26,8 @@ bool Turtlebot3Drive::init()
 
   // initialize variables
   escape_range_       = 30.0 * DEG2RAD;
-  check_forward_dist_ = 0.7;
-  check_side_dist_    = 0.6;
+  check_forward_dist_ = 0.5;
+  check_side_dist_    = 0.3;
 
   tb3_pose_ = 0.0;
   prev_tb3_pose_ = 0.0;
@@ -73,18 +73,44 @@ void Turtlebot3Drive::updatecommandVelocity(const sensor_msgs::Joy& joy_msg)
 {
   geometry_msgs::Twist cmd_vel;
 
-  if(scan_data_[CENTER] < check_forward_dist_){
-	if(cmd_vel.linear.x > 0.0){
+  if(scan_data_[CENTER] > check_forward_dist_){
+	if (scan_data_[LEFT] < check_side_dist_){
 		cmd_vel.linear.x = 0;
-		}
-	cmd_vel.linear.x = joy_msg.axes[2]*(0.25)-0.25;
-	cmd_vel.angular.z = joy_msg.axes[0];
-	
+		cmd_vel.angular.z = -0.5;
+		cout << "right" << endl;
+	}
+	else if (scan_data_[RIGHT] < check_side_dist_){
+		cmd_vel.linear.x = 0;
+		cmd_vel.angular.z = 0.5;
+		cout << "left" << endl;
+	}
+	else{
+		cmd_vel.linear.x = (joy_msg.axes[4]-1)*(-0.25)+(joy_msg.axes[3]-1)*(0.25);
+		cmd_vel.angular.z = joy_msg.axes[0]*0.8;
+		cout << "free" << endl;
+	}
   }
-  else if(scan_data_[CENTER] > check_forward_dist_){
-	cmd_vel.linear.x = (joy_msg.axes[5]*(-0.25)+0.25)+(joy_msg.axes[2]*(0.25)-0.25);
-	cmd_vel.angular.z = joy_msg.axes[0];
+
+  else if(scan_data_[CENTER] < check_forward_dist_){
+	if (scan_data_[LEFT] > check_side_dist_){
+		cmd_vel.linear.x = (joy_msg.axes[3]-1)*(0.25);
+		cmd_vel.angular.z = 0.5;
+		cout << "auto left" << endl;
+	}
+	else if (scan_data_[RIGHT] > check_side_dist_){
+		cmd_vel.linear.x = (joy_msg.axes[3]-1)*(0.25);
+		cmd_vel.angular.z = -0.5;
+		cout << "auto right" << endl;
+	}
+	else{
+		cmd_vel.linear.x = (joy_msg.axes[3]-1)*(0.25);
+		cmd_vel.angular.z = 0;
+		cout << "back" << endl;
+	}
+//	cmd_vel.linear.x = (joy_msg.axes[3]-1)*(0.25);
+//	cmd_vel.angular.z = joy_msg.axes[0]*0.8;
   }
+  
 
 
   cmd_vel_pub_.publish(cmd_vel);
