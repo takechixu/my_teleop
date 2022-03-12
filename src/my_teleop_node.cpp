@@ -26,8 +26,8 @@ bool Turtlebot3Drive::init()
 
   // initialize variables
   escape_range_       = 30.0 * DEG2RAD;
-  check_forward_dist_ = 0.5;
-  check_side_dist_    = 0.3;
+  check_forward_dist_ = 0.2;
+  check_side_dist_    = 0.2;
 
   tb3_pose_ = 0.0;
   prev_tb3_pose_ = 0.0;
@@ -64,56 +64,57 @@ void Turtlebot3Drive::laserScanMsgCallBack(const sensor_msgs::LaserScan::ConstPt
     else
     {
       scan_data_[num] = msg->ranges.at(scan_angle[num]);
+      if(scan_data_[num] == 0) scan_data_[num] = msg->range_max;
     }
   }
 }
 
 
-void Turtlebot3Drive::updatecommandVelocity(const sensor_msgs::Joy& joy_msg)
+void Turtlebot3Drive::updatecommandVelocity(const sensor_msgs::Joy& joy_msg)  //コントローラの関数
 {
-  geometry_msgs::Twist cmd_vel;
+  geometry_msgs::Twist cmd_vel; 
+  // マスターにgeometry_msgs::Twist型のデータを送ることを伝える
 
-  if(scan_data_[CENTER] > check_forward_dist_){
-	if (scan_data_[LEFT] < check_side_dist_){
+  if(scan_data_[CENTER] > check_forward_dist_){  //正面の障害物判定：無
+	if (scan_data_[LEFT] < check_side_dist_){  //左の障害物判定：有
 		cmd_vel.linear.x = 0;
 		cmd_vel.angular.z = -0.5;
 		cout << "right" << endl;
 	}
-	else if (scan_data_[RIGHT] < check_side_dist_){
+	else if (scan_data_[RIGHT] < check_side_dist_){  //右の障害物判定：有
 		cmd_vel.linear.x = 0;
 		cmd_vel.angular.z = 0.5;
 		cout << "left" << endl;
 	}
-	else{
-		cmd_vel.linear.x = (joy_msg.axes[4]-1)*(-0.25)+(joy_msg.axes[3]-1)*(0.25);
+	else{                                    //左右共に障害物無
+		cmd_vel.linear.x = (joy_msg.axes[5]-1)*(-0.15)+(joy_msg.axes[2]-1)*(0.15);
 		cmd_vel.angular.z = joy_msg.axes[0]*0.8;
 		cout << "free" << endl;
 	}
   }
 
-  else if(scan_data_[CENTER] < check_forward_dist_){
-	if (scan_data_[LEFT] > check_side_dist_){
-		cmd_vel.linear.x = (joy_msg.axes[3]-1)*(0.25);
+  else if(scan_data_[CENTER] < check_forward_dist_){  //正面の障害物判定：有
+	if (scan_data_[LEFT] > check_side_dist_){  //左の障害物判定：無
+		cmd_vel.linear.x = (joy_msg.axes[2]-1)*(0.15);
 		cmd_vel.angular.z = 0.5;
-		cout << "auto left" << endl;
+		cout << "stop & left" << endl;
 	}
-	else if (scan_data_[RIGHT] > check_side_dist_){
-		cmd_vel.linear.x = (joy_msg.axes[3]-1)*(0.25);
+	else if (scan_data_[RIGHT] > check_side_dist_){  //右の障害物判定：無
+		cmd_vel.linear.x = (joy_msg.axes[2]-1)*(0.15);
 		cmd_vel.angular.z = -0.5;
-		cout << "auto right" << endl;
+		cout << "stop & right" << endl;
 	}
-	else{
-		cmd_vel.linear.x = (joy_msg.axes[3]-1)*(0.25);
+	else{                                     //全方向に障害物有
+		cmd_vel.linear.x = (joy_msg.axes[2]-1)*(0.15);
 		cmd_vel.angular.z = 0;
 		cout << "back" << endl;
 	}
-//	cmd_vel.linear.x = (joy_msg.axes[3]-1)*(0.25);
-//	cmd_vel.angular.z = joy_msg.axes[0]*0.8;
   }
+//  cout << "0:" << scan_data_[CENTER] << endl;  //正面方向のセンサ読み取り値を表示
+//  cout << "30:" << scan_data_[LEFT] << endl;  //左方向のセンサ読み取り値を表示
+//  cout << "330:" << scan_data_[RIGHT] << endl;  //右方向のセンサ読み取り値を表示
   
-
-
-  cmd_vel_pub_.publish(cmd_vel);
+  cmd_vel_pub_.publish(cmd_vel);  //速度指令値送信
 }
 
 
@@ -135,7 +136,7 @@ int main(int argc, char **argv)
 //    ros::Subscriber joy_sub = nh.subscribe("joy", 10, Turtlebot3Drive::updatecommandVelocity);
     Turtlebot3Drive turtlebot3_drive;
     
-    ros::Rate rate(10);
+    ros::Rate rate(50);
     // ループの頻度を設定するためのオブジェクトを作成。この場合は10Hz、1秒間に10回数、1ループ100ms。
 
 //    geometry_msgs::Twist vel;
